@@ -12,6 +12,8 @@ import (
 // on the priority queue.
 type Interface interface {
 	Less(other interface{}) bool
+	Index() int
+	UpdateIndex(i int)
 }
 
 // Queue is a threadsafe priority queue exchange. Here's
@@ -37,7 +39,7 @@ type Queue struct {
 
 // New creates and initializes a new priority queue, taking
 // a limit as a parameter. If 0 given, then queue will be
-// unlimited. 
+// unlimited.
 func New(max int) (q *Queue) {
 	var locker sync.Mutex
 	q = &Queue{Limit: max}
@@ -62,7 +64,7 @@ func (q *Queue) Enqueue(item Interface) (err error) {
 // Dequeue takes an item from the queue. If queue is empty
 // then should block waiting for at least one item.
 func (q *Queue) Dequeue() (item Interface) {
-	q.cond.L.Lock()	
+	q.cond.L.Lock()
 start:
 	x := heap.Pop(q.items)
 	if x == nil {
@@ -72,6 +74,14 @@ start:
 	q.cond.L.Unlock()
 	item = x.(Interface)
 	return
+}
+
+// Remove removes the element at index i from the heap.
+// The complexity is O(log n) where n = h.Len().
+func (q *Queue) Remove(item Interface) {
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
+	heap.Remove(q.items, item.Index())
 }
 
 // Safely changes enqueued items limit. When limit is set
@@ -87,41 +97,38 @@ func (q *Queue) Len() int {
 	return q.items.Len()
 }
 
-// IsEmpty returns true if queue is empty.
-func (q *Queue) IsEmpty() bool {
-	return q.Len() == 0
-}
-
 type sorter []Interface
 
 func (s *sorter) Push(i interface{}) {
+	n := len(*s)
 	item, ok := i.(Interface)
 	if !ok {
 		return
 	}
-	*s = append((*s)[:], item)
+	item.UpdateIndex(n)
+	*s = append(*s, item)
 }
 
 func (s *sorter) Pop() (x interface{}) {
-	if s.Len() > 0 {
-		l := s.Len()-1
-		x = (*s)[l]
-		(*s)[l] = nil
-		*s = (*s)[:l]
+	old := *s
+	n := len(old)
+	if n > 0 {
+		item := old[n-1]
+		old[n-1] = nil       // avoid memory leak
+		item.UpdateIndex(-1) // for safety
+		*s = old[0 : n-1]
 	}
 	return
 }
 
-func (s *sorter) Len() int {
-	return len((*s)[:])
-}
+func (s sorter) Len() int { return len(s) }
 
-func (s *sorter) Less(i, j int) bool {
-	return (*s)[i].Less((*s)[j])
-}
+func (s sorter) Less(i, j int) bool { return s[i].Less(s[j]) }
 
-func (s *sorter) Swap(i, j int) {
+func (s sorter) Swap(i, j int) {
 	if s.Len() > 0 {
-		(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
+		s[i], s[j] = s[j], s[i]
+		s[i].UpdateIndex(i)
+		s[j].UpdateIndex(j)
 	}
 }
