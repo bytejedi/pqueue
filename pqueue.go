@@ -50,7 +50,7 @@ func New(max int) (q *Queue) {
 }
 
 // Enqueue puts given item to the queue.
-func (q *Queue) Enqueue(item Interface) (err error) {
+func (q *Queue) Enqueue(item Interface) error {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 	if q.Limit > 0 && q.Len() >= q.Limit {
@@ -58,12 +58,12 @@ func (q *Queue) Enqueue(item Interface) (err error) {
 	}
 	heap.Push(q.items, item)
 	q.cond.Signal()
-	return
+	return nil
 }
 
 // Dequeue takes an item from the queue. If queue is empty
 // then should block waiting for at least one item.
-func (q *Queue) Dequeue() (item Interface) {
+func (q *Queue) Dequeue() Interface {
 	q.cond.L.Lock()
 start:
 	x := heap.Pop(q.items)
@@ -72,20 +72,19 @@ start:
 		goto start
 	}
 	q.cond.L.Unlock()
-	item = x.(Interface)
-	return
+	return x.(Interface)
 }
 
-func (q *Queue) Front(item Interface) {
+func (q *Queue) Front() Interface {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
-	q.items.Front()
+	return q.items.Front().(Interface)
 }
 
-func (q *Queue) Back(item Interface) {
+func (q *Queue) Back() Interface {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
-	q.items.Back()
+	return q.items.Back().(Interface)
 }
 
 // Remove removes the element at index i from the heap.
