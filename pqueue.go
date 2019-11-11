@@ -92,7 +92,7 @@ func (q *Queue) Back() Interface {
 func (q *Queue) Remove(item Interface) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
-	heap.Remove(q.items, item.Index())
+	q.items.Remove(item.Index())
 }
 
 // Safely changes enqueued items limit. When limit is set
@@ -131,6 +131,10 @@ func (s *sorter) Pop() interface{} {
 		return item
 	}
 	return nil
+}
+
+func (s *sorter) Remove(i int) {
+	heap.Remove(s, i)
 }
 
 func (s *sorter) Front() interface{} {
