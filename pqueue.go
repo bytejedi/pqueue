@@ -76,6 +76,18 @@ start:
 	return
 }
 
+func (q *Queue) Front(item Interface) {
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
+	q.items.Front()
+}
+
+func (q *Queue) Back(item Interface) {
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
+	q.items.Back()
+}
+
 // Remove removes the element at index i from the heap.
 // The complexity is O(log n) where n = h.Len().
 func (q *Queue) Remove(item Interface) {
@@ -109,7 +121,7 @@ func (s *sorter) Push(i interface{}) {
 	*s = append(*s, item)
 }
 
-func (s *sorter) Pop() (x interface{}) {
+func (s *sorter) Pop() interface{} {
 	old := *s
 	n := len(old)
 	if n > 0 {
@@ -117,8 +129,24 @@ func (s *sorter) Pop() (x interface{}) {
 		old[n-1] = nil       // avoid memory leak
 		item.UpdateIndex(-1) // for safety
 		*s = old[0 : n-1]
+		return item
 	}
-	return
+	return nil
+}
+
+func (s *sorter) Front() interface{} {
+	if s.Len() > 0 {
+		return (*s)[0]
+	}
+	return nil
+}
+
+func (s *sorter) Back() interface{} {
+	n := s.Len()
+	if n > 0 {
+		return (*s)[n-1]
+	}
+	return nil
 }
 
 func (s sorter) Len() int { return len(s) }
