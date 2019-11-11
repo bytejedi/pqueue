@@ -75,16 +75,10 @@ start:
 	return x.(Interface)
 }
 
-func (q *Queue) Front() Interface {
+func (q *Queue) Peek() Interface {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
-	return q.items.Front().(Interface)
-}
-
-func (q *Queue) Back() Interface {
-	q.cond.L.Lock()
-	defer q.cond.L.Unlock()
-	return q.items.Back().(Interface)
+	return q.items.Peek().(Interface)
 }
 
 // Remove removes the element at index i from the heap.
@@ -145,18 +139,9 @@ func (s sorter) Swap(i, j int) {
 	}
 }
 
-func (s *sorter) Front() interface{} {
+func (s *sorter) Peek() interface{} {
 	if s.Len() > 0 {
 		return (*s)[0]
-	}
-	return nil
-}
-
-func (s *sorter) Back() interface{} {
-	n := s.Len()
-	if n > 0 {
-		heap.Fix(s, n)
-		return (*s)[n-1]
 	}
 	return nil
 }
