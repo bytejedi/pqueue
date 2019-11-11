@@ -92,7 +92,7 @@ func (q *Queue) Back() Interface {
 func (q *Queue) Remove(item Interface) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
-	q.items.Remove(item.Index())
+	heap.Remove(q.items, item.Index())
 }
 
 // Safely changes enqueued items limit. When limit is set
@@ -133,8 +133,16 @@ func (s *sorter) Pop() interface{} {
 	return nil
 }
 
-func (s *sorter) Remove(i int) {
-	heap.Remove(s, i)
+func (s sorter) Len() int { return len(s) }
+
+func (s sorter) Less(i, j int) bool { return s[i].Less(s[j]) }
+
+func (s sorter) Swap(i, j int) {
+	if s.Len() > 0 {
+		s[i], s[j] = s[j], s[i]
+		s[i].UpdateIndex(i)
+		s[j].UpdateIndex(j)
+	}
 }
 
 func (s *sorter) Front() interface{} {
@@ -147,19 +155,8 @@ func (s *sorter) Front() interface{} {
 func (s *sorter) Back() interface{} {
 	n := s.Len()
 	if n > 0 {
+		heap.Fix(s, n)
 		return (*s)[n-1]
 	}
 	return nil
-}
-
-func (s sorter) Len() int { return len(s) }
-
-func (s sorter) Less(i, j int) bool { return s[i].Less(s[j]) }
-
-func (s sorter) Swap(i, j int) {
-	if s.Len() > 0 {
-		s[i], s[j] = s[j], s[i]
-		s[i].UpdateIndex(i)
-		s[j].UpdateIndex(j)
-	}
 }
